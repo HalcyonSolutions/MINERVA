@@ -39,7 +39,23 @@ if (( ${#cfgs[@]} == 0 )); then
 fi
 
 # Sort deterministically.
-IFS=$'\n' cfgs=($(printf "%s\n" "${cfgs[@]}"))
+IFS=
+unset IFS
+
+for cfg in "${cfgs[@]}"; do
+  echo "[LAUNCH] $cfg"
+  bash scripts/run_nlq.sh "$cfg" &
+  ((++running))
+
+  if (( running >= MAX_JOBS )); then
+    wait -n
+    ((--running))
+  fi
+done
+
+wait
+echo "All experiments completed."
+\n' cfgs=($(printf "%s\n" "${cfgs[@]}" | sort))
 unset IFS
 
 for cfg in "${cfgs[@]}"; do

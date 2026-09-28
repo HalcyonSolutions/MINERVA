@@ -37,7 +37,20 @@ conda env create -f environment.yml
 conda activate minerva
 ~~~
 
-Python 3.9 is used by the provided environment. A pip-only installation is also possible with <code>pip install -r requirements.txt</code>.
+The provided environment uses Python 3.9 and includes the CUDA 11.2 / cuDNN 8.1 runtime required by TensorFlow 2.11.1.
+
+A pip-only installation is also possible:
+
+~~~bash
+python -m pip install -r requirements.txt
+~~~
+
+If you are using a custom Conda environment instead of `environment.yml` and want GPU support, install the matching CUDA runtime:
+
+~~~bash
+conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0 -y
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+~~~
 
 ### 2. Prepare a dataset
 

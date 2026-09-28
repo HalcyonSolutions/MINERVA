@@ -1602,11 +1602,11 @@ class TrainerNLQ(object):
         logger.info(f"\tHits@20: {all_final_reward_20:7.4f}")
         logger.info(f"\tMRR: {mrr:7.4f}")
 
-        logger.info(f"Per Hop Answer Metrics\n")
+        logger.info(f"Per Hop Answer Metrics")
         for i0 in all_hop_accuracy.keys():
-            logger.info(f"\t{i0}-Hop\n")
-            logger.info(f"\t\tHits@1: {all_hop_accuracy[i0]:7.4f}\n")
-            logger.info(f"\t\tMRR: {all_hop_mrr[i0]:7.4f}\n")
+            logger.info(f"\t{i0}-Hop")
+            logger.info(f"\t\tHits@1: {all_hop_accuracy[i0]:7.4f}")
+            logger.info(f"\t\tMRR: {all_hop_mrr[i0]:7.4f}")
         
         logger.info("Average Valid Action Count at Each Step:")
         logger.info(f"\tOverall Average: {all_valid_action_count.mean():7.4f}")

@@ -356,7 +356,7 @@ bash scripts/baselines/run_mquake_st_sa.sh 0 100
 
 Machine-readable results are written below <code>output/&lt;dataset&gt;/baselines/</code>. In the random-walk JSON output, the paper's <code>RW-Ans_MC</code> quantity is stored under the summary key <code>RW_Ans</code>.
 
-See [Evaluation metrics](metrics.md#15-structural-calibration-references) for the interpretation of these references and [<code>code/baselines/</code>](https://github.com/HernandezEduin/MINERVA/tree/master/code/baselines) for the implementations.
+See [Evaluation metrics](metrics.md#15-structural-calibration-references) for the interpretation of these references and [<code>code/baselines/</code>](../code/baselines) for the implementations.
 
 ## 8. Important configuration groups
 

@@ -268,7 +268,7 @@ These are primarily debugging/analysis statistics rather than headline task metr
 
 The path-fidelity numbers in *Theseus in the Graph* are accompanied by two **non-learned structural calibration references**. They are intended to make the scale of PED, RED, F1_SG, and F1_REL easier to interpret; they are not competing KGQA models.
 
-The implementations are in [<code>code/baselines/</code>](https://github.com/HernandezEduin/MINERVA/tree/master/code/baselines), and the dataset-level launchers are in <code>scripts/baselines/</code>. The definitions follow Appendix A.4 of [*Theseus in the Graph*](https://arxiv.org/abs/2609.14528).
+The implementations are in [<code>code/baselines/</code>](../code/baselines), and the dataset-level launchers are in <code>scripts/baselines/</code>. The definitions follow Appendix A.4 of [*Theseus in the Graph*](https://arxiv.org/abs/2609.14528).
 
 ### RW-Ans_MC and the unbiased random-walk reference
 

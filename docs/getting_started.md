@@ -31,9 +31,13 @@ bash scripts/run_nlq.sh configs/kinship/train.yaml
 
 The repository provides preprocessing wrappers for the datasets used by the navigation experiments. They copy the navigation-ready source files into <code>datasets/nlq/&lt;dataset&gt;/</code>, build the graph representation, and create entity/relation vocabularies.
 
+The central [THESEUS project page](https://github.com/HalcyonSolutions/THESEUS) indexes the released datasets, their mirrors, the other adapted agents, and pretrained checkpoints. Dataset-specific download links are also listed below.
+
 ### Kinship
 
-Download the dataset into the location expected by the preprocessing wrapper:
+**Dataset:** [Hugging Face](https://huggingface.co/datasets/HalcyonSolutions/Kinship) · [Google Cloud mirror](https://storage.googleapis.com/halcyon_data/multihop_ds/datasets/Kinship/index.html)
+
+Download the dataset into the location expected by the preprocessing wrapper. For example, using Hugging Face:
 
 ~~~bash
 huggingface-cli download HalcyonSolutions/Kinship \
@@ -51,6 +55,10 @@ The resulting QA file is <code>datasets/nlq/kinship/kinship_qa_nhop.csv</code>.
 
 ### MQuAKE-ST
 
+**Dataset:** [Hugging Face](https://huggingface.co/datasets/HalcyonSolutions/MQuAKE-ST) · [Google Cloud mirror](https://storage.googleapis.com/halcyon_data/multihop_ds/datasets/MQuAKE_ST/index.html)
+
+For example, using Hugging Face:
+
 ~~~bash
 huggingface-cli download HalcyonSolutions/MQuAKE-ST \
   --repo-type dataset \
@@ -66,7 +74,9 @@ This creates both the single-answer and multi-answer QA files used by the suppli
 
 ### MetaQA
 
-The preprocessing wrapper expects the navigation-ready MetaQA files under:
+**Dataset:** [Original MetaQA repository](https://github.com/yuyuz/MetaQA) · [THESEUS Google Cloud mirror](https://storage.googleapis.com/halcyon_data/multihop_ds/datasets/MetaQA/index.html)
+
+The preprocessing wrapper uses the navigation-ready THESEUS version and expects its files under:
 
 ~~~text
 ./raw_data/metaqa_dataset/
@@ -78,11 +88,7 @@ The preprocessing wrapper expects the navigation-ready MetaQA files under:
 └── LICENSE
 ~~~
 
-The dataset source currently referenced by the wrapper is:
-
-https://storage.googleapis.com/halcyon_data/multihop_ds/datasets/MetaQA/index.html
-
-After placing the files in that directory, run:
+Download the navigation-ready files from the Google Cloud mirror above and place them in that directory. Then run:
 
 ~~~bash
 bash scripts/preprocessing/metaqa.sh

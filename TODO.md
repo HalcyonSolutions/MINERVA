@@ -32,4 +32,4 @@ Completed items are kept here for project history rather than removed.
 
 ## Validation & Reproducibility
 
-- [ ] Test the repository from scratch
+- [x] Test the repository from scratch

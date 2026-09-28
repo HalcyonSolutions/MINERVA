@@ -1,410 +1,301 @@
-# Metrics and Result Presentation Plan
+# Evaluation Metrics
 
-This file summarizes how we should present results for the MultiHop KGQA paper, with a focus on a space-constrained NeurIPS submission.
+This document describes the metrics implemented by the current natural-language MINERVA evaluator. The terminology is aligned with *Theseus in the Graph: Towards Traceable Multi-Hop Graph Navigation*, where answer correctness is evaluated together with the explicit navigation trajectory.
 
-## 1. Recommended Evaluation Protocol
+The authoritative implementations are in:
 
-Use the following setup as the default paper protocol:
+- <code>code/model/trainer.py</code> for rollout ranking and dataset-level aggregation;
+- <code>code/model/environment.py</code> for path cleanup, path/relation overlap, multi-answer path expansion, and navigation diagnostics; and
+- <code>code/model/metrics.py</code> for Levenshtein edit distance, entropy, and set precision/recall/F1.
 
-- Main benchmark: `Train on original questions -> Test on original questions`
-- Robustness evaluation: `Train on original questions -> Test on paraphrase-expanded questions`
-- Optional augmentation ablation: `Train on paraphrase-sampled questions -> Test on original and paraphrase-expanded questions`
+## 1. Which rollout is evaluated?
 
-### Why this protocol
+During evaluation, each question produces multiple rollouts. With beam search enabled, the number of evaluated rollouts is:
 
-- It keeps the main benchmark aligned with the standard task definition.
-- It treats paraphrases as a robustness test instead of redefining the task.
-- It lets us separate two questions:
-  `Can the model solve the task?`
-  `Does the model remain correct under wording variation?`
+~~~text
+min(test_rollouts, max_num_actions)
+~~~
 
-### Important paraphrase note
+Each rollout has a cumulative policy log-probability. Rollouts are sorted from highest to lowest score.
 
-In the inspected `mquake_st` CSVs, `Question-Paraphrased` appears to include the original wording as one of the entries. Combined with the current loader:
+Two different views of those rollouts are used:
 
-- `question_format='paraphrased'` means training-time paraphrase sampling, not dataset expansion.
-- `evaluate_paraphrases=True` means evaluation-time row expansion, where each paraphrase becomes its own evaluation example.
+- **Answer ranking metrics** consider the ranked candidate endpoints across rollouts.
+- **Trajectory-fidelity metrics and top-rollout diagnostics** use the single highest-scoring rollout for each question, whether or not that rollout reaches a correct answer.
 
-So `Test on paraphrase-expanded questions` is not strictly paraphrase-only unless we filter out entries identical to the original question first.
+This distinction is important: F1_SG, F1_REL, PED, and RED do not select the best matching gold trajectory after looking at all predicted rollouts. They evaluate the policy's top-scoring predicted trajectory. The only exception is how a multi-answer example chooses among multiple **valid reference paths**, described below.
 
-## 2. Main Paper Results
+## 2. Answer ranking: Hits@K and MRR
 
-Because the dataset provides evidence paths and the adapted models produce explicit reasoning trails, the paper should not present answer quality alone. The main results should jointly report:
+The evaluator reports:
 
-- answer quality
-- reasoning faithfulness to the evidence path
+- Hits@1
+- Hits@3
+- Hits@5
+- Hits@10
+- Hits@20
+- Mean Reciprocal Rank (MRR)
 
-### Table 1: Overall Answer + Faithfulness Results
+These are **rollout-induced endpoint rankings**, not exhaustive full-entity rankings such as those commonly used for knowledge-graph embeddings.
 
-This should be the primary quantitative table in the paper.
+### Default max pooling
 
-Report:
+With <code>pool: max</code>, rollouts are processed in descending log-probability order. Duplicate terminal entities do not consume additional rank positions. Therefore, the effective ranking is the sequence of **unique endpoint entities ordered by their highest-scoring occurrence**.
 
-- `Mix-Hop Hits@1`
-- `Mix-Hop MRR`
-- `GT-Edge Overlap F1` only for single-answer settings
-- `Relation Edit Distance`
-- `Answer-Set F1` only for multi-answer settings
+For a question, let rank(q) be the 1-based rank of the first gold endpoint in that unique endpoint ranking. Then:
 
-Optional extra column if space allows:
+~~~text
+Hits@K(q) = 1 if rank(q) <= K, otherwise 0
+MRR(q)    = 1 / rank(q), or 0 if no gold answer is reached
+~~~
 
-- `Path Edit Distance`
+Dataset values are macro-averages over questions.
 
-### Why these metrics belong in the main table
+For multi-answer questions, reaching **any** gold endpoint counts as a correct ranked answer.
 
-- `Hits@1` is the clearest headline answer-quality metric.
-- `MRR` adds ranking quality without introducing too many columns.
-- `GT-Edge Overlap F1` directly measures whether the predicted reasoning trail aligns with the ground-truth evidence edges, which is one of the distinctive strengths of this dataset. Basically, ground truth triplets set vs predicted triplet sets of the top rollout.
-- `Relation Edit Distance` captures ordered reasoning quality at the relation-chain level and complements edge overlap by being sequence-sensitive.
-  Because it is normalized per example, the overall mix-hop value should be treated as a summary rather than a standalone fidelity result.
-- `Answer-Set F1` is useful only when multiple answers are valid, because it measures coverage across rollouts rather than only top-rollout correctness.
-- `Path Edit Distance` is a stricter exact-path metric and is worth adding only if the table can absorb one more column.
+### Sum pooling
 
-### Recommended compact column layout
+With <code>pool: sum</code>, rollout log-probabilities are grouped by endpoint and combined with log-sum-exp before endpoint ranking.
 
-If space is tight, use:
+The current trainer contains an explicit TODO for correcting this branch for multi-answer questions. For multi-answer experiments, <code>pool: max</code> should therefore be treated as the supported/default interpretation unless the sum-pooling code is updated.
 
-- `Hits@1`
-- `MRR`
-- `Edge F1`
-- `Rel. Edit Dist.`
-- `Answer-Set F1` if applicable
+### Per-hop answer metrics
 
-If there is a little more room, add:
+The evaluator also groups questions by their annotated <code>Hops</code> value and reports per-hop:
 
-- `Path Edit Dist.`
+- Hits@1
+- MRR
 
-### Table 2: Per-Hop Performance
+These are useful for separating overall answer quality from reasoning-depth effects.
 
-Keep hop-difficulty analysis in a separate table so the main table stays readable.
+## 3. Answer-set endpoint coverage
 
-Report:
+Endpoint coverage compares the **set of unique terminal entities reached across all rollouts** for a question with its set of gold answers.
 
-- `2-hop Hits@1`
-- `3-hop Hits@1`
-- `4-hop Hits@1`
-- `2-hop MRR`
-- `3-hop MRR`
-- `4-hop MRR`
-- `2-hop Relation Edit Distance`
-- `3-hop Relation Edit Distance`
-- `4-hop Relation Edit Distance`
+For predicted endpoint set A and gold answer set G:
 
-If space is extremely tight, keep only the per-hop `Hits@1` columns in the main paper and move per-hop `MRR` to the appendix.
+~~~text
+Precision = |A ∩ G| / |A|
+Recall    = |A ∩ G| / |G|
+F1        = harmonic mean of Precision and Recall
+~~~
 
-### Why per-hop edit distance should be shown
+The evaluator computes these values per question and macro-averages them.
 
-The edit-distance metrics in this repo are normalized per example and then averaged across questions.
-Since the dataset mixes different hop counts, a single overall normalized edit-distance value can be misleading when shown alone.
+This metric is especially useful for multi-answer KGQA because Hits@1 can be perfect after finding only one valid answer, whereas answer-set recall exposes whether the rollout population covers the other valid answers.
 
-For the paper:
+For single-answer datasets, the same code evaluates against a singleton gold set.
 
-- show the overall mix-hop edit distance as a summary
-- but always pair it with per-hop edit distance
+## 4. Which predicted path is compared?
 
-This is especially important for `Relation Edit Distance`, which is one of the main faithfulness metrics.
+The top-scoring rollout is first converted into an edge sequence:
 
-## 3. Robustness Results
+~~~text
+(head_entity, relation, tail_entity)
+~~~
 
-### Table 3: Paraphrase Robustness
+The configured <code>path_segment_policy</code> is then applied. The CLI/configuration default is <code>final_segment_truncate</code>.
 
-Keep paraphrase experiments in a separate robustness table, not in the main benchmark table.
+| Policy | Behavior |
+| --- | --- |
+| <code>raw</code> | Keep the raw trajectory |
+| <code>truncate_at_stop</code> | Remove NO_OP and cut before the first STOP |
+| <code>final_segment</code> | Remove NO_OP and keep only edges after the final RESTART |
+| <code>final_segment_truncate</code> | Keep only the final post-RESTART segment and cut it before STOP |
 
-Recommended rows:
+Metric functions additionally ignore special NO_OP, STOP, and RESTART relations where appropriate.
 
-- `Train: Original -> Test: Original`
-- `Train: Original -> Test: Paraphrase-expanded`
-- `Train: Paraphrase-sampled -> Test: Original`
-- `Train: Paraphrase-sampled -> Test: Paraphrase-expanded`
+Inverse traversal relations are canonicalized before path/relation comparison: an inverse edge is mapped to its original forward relation and its head/tail orientation is swapped.
 
-Recommended columns:
+## 5. Subgraph overlap: F1_SG
 
-- `Hits@1`
-- `MRR`
-- optional `Relation Edit Distance`
+The code names these values **SubGraph Overlap Metrics (SG)**.
 
-### If only one robustness experiment fits
+For the cleaned predicted path P and a gold path P*, both are converted to sets of canonical directed KG edges. Edge order and multiplicity are ignored.
 
-Prioritize:
+~~~text
+E_pred = set of predicted canonical edges
+E_gold = set of gold directed edges
+~~~
 
-- `Train: Original -> Test: Paraphrase-expanded`
+Precision_SG, Recall_SG, and F1_SG are ordinary set-overlap precision, recall, and F1.
 
-This is the cleanest robustness result because it asks whether the standard model survives wording changes without paraphrase-specific training.
+### Interpretation
 
-### What "paraphrase-expanded" means
+F1_SG answers:
 
-In this repo, `paraphrase-expanded` evaluation means:
+> Did the predicted trajectory traverse the same evidence edges as a valid reference path?
 
-- take the `Question-Paraphrased` list for each example
-- create one evaluation row per entry in that list
-- replace `Question` with that entry
+It is permutation-invariant, so it complements PED, which is order-sensitive.
 
-In the current `mquake_st` dataset, the paraphrase list appears to include the original question itself.
-So under the current code and current data, `paraphrase-expanded` includes:
+## 6. Path Edit Distance (PED)
 
-- the original wording
-- the paraphrased variants
+PED is the standard Levenshtein edit distance between the **ordered canonical edge sequences** of the predicted and gold paths.
 
-It is therefore not a strict paraphrase-only evaluation unless entries identical to the original question are filtered out before expansion.
+Insertions, deletions, and substitutions each have unit cost.
 
-## 4. Faithfulness and Interpretability Results
+**Important:** the current implementation returns the **raw edit distance**. It is **not divided by path length**.
 
-Since evidence-path fidelity is part of the paper's core claim, not all faithfulness metrics should be hidden in the appendix. The main table should already include:
+Per-question PED is therefore an integer, while the reported dataset-level average is generally fractional because distances are averaged across questions.
 
-- `GT-Edge Overlap F1`
-- `Relation Edit Distance`
+Lower is better; PED = 0 means exact edge-sequence agreement after the configured trajectory cleanup and inverse-edge canonicalization.
 
-The remaining faithfulness metrics should be reported as supporting evidence:
+The evaluator reports both:
 
-- `Relation F1`
-- `Path Edit Distance`
-- `Node Overlap F1`
-- `Answer-Set Precision`
-- `Answer-Set Recall`
+- overall average PED; and
+- PED grouped by annotated hop count.
 
-### Suggested interpretation
+## 7. Relation overlap: F1_REL
 
-- `GT-Edge Overlap F1`:
-  best evidence-grounding metric because it directly compares predicted edges with the gold evidence path
-- `Relation Edit Distance`:
-  best sequence-sensitive faithfulness metric for the main paper, but it should be reported per hop in addition to the overall value
-- `Relation F1`:
-  useful companion because it gives order-insensitive relation overlap
-- `Path Edit Distance`:
-  stricter than relation edit distance because it requires exact edge-level path agreement
-- `Node Overlap F1`:
-  weakest of the faithfulness metrics; useful, but lower priority if space is tight
+The code names these values **Relation-Set Overlap Metrics (REL)**.
 
-## 5. Analysis and Ablations Only
+The cleaned predicted relations are canonicalized so inverse relation tokens map back to their original relation IDs. Special actions are ignored. Predicted and gold relations are then compared as sets.
 
-These metrics should be used only when they directly support a method claim, such as STOP/RESTART signals or trajectory quality analysis.
+This yields Precision_REL, Recall_REL, and F1_REL.
 
-- `Stop Rate`
-- `Correct Stop Rate`
-- `Incorrect Stop Rate`
-- `Termination Steps`
-- `Restart Any Rate`
-- `Post-Restart Success Rate`
-- `Restart-and-Hit Rate`
-- `Special Step Rate`
-- `Cycle Rate`
-- `Backtrack Rate`
-- `No-Op Rate`
-- `Unique Edges`
-- `Redundancy`
-- `Avg Segment Hops`
+F1_REL is less strict than F1_SG because it ignores the entities connected by each relation and ignores relation order.
 
-These are useful for error analysis and behavioral diagnostics, but not for headline benchmark reporting.
+Relation-level metrics can be computed when either:
 
-## 6. Metrics To Keep Out of the Main Paper
+- a full entity-level gold <code>Paths</code> annotation is available; or
+- a relation-chain <code>Path-Key</code> is available.
 
-Do not spend main-paper space on these unless they are central to a specific claim:
+## 8. Relation Edit Distance (RED)
 
-- `Hits@3`
-- `Hits@5`
-- `Hits@10`
-- `Hits@20`
-- `Question Entropy`
-- `Path Entropy`
-- `Valid Action Count`
+RED is the standard Levenshtein edit distance between the **ordered relation sequences** of the cleaned predicted path and the gold relation sequence.
 
-They are useful internally, but they are not the most efficient use of limited paper space.
+As with PED:
 
-## 7. Reporting Notes and Caveats
+- inverse relation tokens are canonicalized;
+- special actions are ignored; and
+- the distance is **raw, not length-normalized**.
 
-- In this repo, `Hits@K` are rollout-ranked answer metrics, not full-entity-ranking KG completion metrics.
-  Define this explicitly in the paper.
-- `Relation Edit Distance`, `Path Edit Distance`, and overlap metrics are computed from the top-scoring rollout/path per question.
-- `Answer-Set F1` is computed over the union of answer endpoints across rollouts for a question.
-  It measures coverage/diversity, not only top-rollout quality.
-- The normalized edit distances are averaged across examples.
-  Because path lengths differ, overall edit-distance numbers should be interpreted together with per-hop breakdowns rather than shown alone.
-- If using paraphrase-expanded evaluation, state clearly whether original-identical paraphrases were kept or filtered out.
-  In the current dataset format, they appear to be kept unless explicitly removed.
+Lower is better; RED = 0 means exact relation-sequence agreement.
 
-## 8. Minimal Fallback Set
+The evaluator reports overall and per-hop averages.
 
-If space becomes extremely tight, keep only:
+## 9. Node-set overlap
 
-1. `Mix-Hop Hits@1`
-2. `Mix-Hop MRR`
-3. `GT-Edge Overlap F1`
-4. `Relation Edit Distance`
-5. `Per-Hop Hits@1`
-6. `Answer-Set F1` only when the task is multi-answer
+When full entity-level reference paths are available, the evaluator also compares:
 
-## 9. Final Presentation Summary
+- the set of entities visited by the cleaned predicted path; and
+- the set of head/tail entities in the gold path.
 
-If we follow the recommended structure, the paper should present results in this order:
+It reports node precision, recall, and F1.
 
-1. Main benchmark table:
-   answer quality plus evidence-path faithfulness on original questions
-2. Per-hop table:
-   difficulty breakdown by reasoning depth
-3. Small robustness table:
-   performance under paraphrased wording
-4. Appendix diagnostics:
-   stop/restart behavior and trajectory analysis
+This is a looser diagnostic than F1_SG because a trajectory may visit the correct nodes through the wrong relations or edges.
 
-## 10. Reference Implementations
-
-The following Python functions are lightweight reference implementations of the main faithfulness metrics used in this repo.
-They are written so collaborators can reproduce the metric definitions without needing to read the full training code.
-
-```python
-from typing import Dict, Iterable, List, Sequence, Set, Tuple
+## 10. Multi-answer path fidelity
 
+A multi-answer question can have more than one entity-level path that is semantically valid. The current test evaluator handles the case where the dataset provides:
 
-def compute_precision_recall_f1(
-    pred: Set,
-    gt: Set,
-    eps: float = 1e-8,
-) -> Tuple[float, float, float]:
-    tp = len(pred & gt)
-    fp = len(pred - gt)
-    fn = len(gt - pred)
-
-    precision = tp / (tp + fp + eps)
-    recall = tp / (tp + fn + eps)
-    f1 = 2 * precision * recall / (precision + recall + eps)
-    return precision, recall, f1
-
-
-def edit_distance(
-    seq1: Sequence,
-    seq2: Sequence,
-) -> Tuple[int, int, int]:
-    m = len(seq1)
-    n = len(seq2)
-
-    if m == 0 and n == 0:
-        return 0, m, n
-    if m == 0 or n == 0:
-        return max(m, n), m, n
-
-    dp = [[0] * (n + 1) for _ in range(m + 1)]
-
-    for i in range(m + 1):
-        dp[i][0] = i
-    for j in range(n + 1):
-        dp[0][j] = j
-
-    for i in range(1, m + 1):
-        for j in range(1, n + 1):
-            if seq1[i - 1] == seq2[j - 1]:
-                dp[i][j] = dp[i - 1][j - 1]
-            else:
-                dp[i][j] = min(
-                    dp[i - 1][j] + 1,      # deletion
-                    dp[i][j - 1] + 1,      # insertion
-                    dp[i - 1][j - 1] + 1,  # substitution
-                )
-
-    return dp[m][n], m, n
-
-
-def canon_edge(
-    h: int,
-    r: int,
-    t: int,
-    inverse_mapping: Dict[int, int],
-) -> Tuple[int, int, int]:
-    """
-    Convert an inverse edge token back to its canonical forward edge.
-    If r is an inverse relation token, map it back to its base relation
-    and swap head/tail.
-    """
-    if r in inverse_mapping:
-        return (t, inverse_mapping[r], h)
-    return (h, r, t)
-
-
-def canon_rel(
-    r: int,
-    inverse_mapping: Dict[int, int],
-) -> int:
-    """
-    Convert an inverse relation token back to its base relation token.
-    """
-    return inverse_mapping.get(r, r)
-
-
-def gt_edge_overlap_f1(
-    pred_path: Sequence[Tuple[int, int, int]],
-    gt_path: Sequence[Tuple[int, int, int]],
-    special_tokens: Set[int],
-    inverse_mapping: Dict[int, int],
-) -> Tuple[float, float, float]:
-    """
-    Permutation-invariant edge overlap between predicted and gold paths.
-
-    Mirrors the repo behavior:
-    - remove special tokens such as NO_OP / STOP / RESTART
-    - canonicalize inverse edges back into forward edges
-    - compare edge sets
-    """
-    pred_edges = {
-        canon_edge(h, r, t, inverse_mapping)
-        for h, r, t in pred_path
-        if r not in special_tokens
-    }
-    gt_edges = {(h, r, t) for h, r, t in gt_path}
-    return compute_precision_recall_f1(pred_edges, gt_edges)
-
-
-def relation_edit_distance_norm(
-    pred_relations: Sequence[int],
-    gt_relations: Sequence[int],
-    special_tokens: Set[int],
-    inverse_mapping: Dict[int, int],
-    eps: float = 1e-8,
-) -> float:
-    """
-    Normalized relation-sequence edit distance.
-
-    Mirrors the repo behavior:
-    - remove special relation tokens such as NO_OP / STOP / RESTART
-    - canonicalize inverse relation tokens
-    - compute Levenshtein distance
-    - normalize by max(pred_len, gt_len)
-    """
-    pred_rels = [
-        canon_rel(r, inverse_mapping)
-        for r in pred_relations
-        if r not in special_tokens
-    ]
-    gt_rels = list(gt_relations)
-
-    dist, m, n = edit_distance(pred_rels, gt_rels)
-    return dist / (max(m, n) + eps)
-
-
-def answer_set_f1(
-    predicted_endpoints: Iterable[int],
-    gold_answers: Iterable[int],
-    eps: float = 1e-8,
-) -> Tuple[float, float, float]:
-    """
-    Answer-set precision / recall / F1 over rollout endpoints.
-
-    Use this when multiple answers are valid:
-    - predicted_endpoints: all final entities reached across rollouts
-    - gold_answers: all correct answer entities
-
-    The metric compares sets, so duplicate rollout endpoints are ignored.
-    """
-    pred_set = set(predicted_endpoints)
-    gold_set = set(gold_answers)
-
-    tp = len(pred_set & gold_set)
-    precision = tp / (len(pred_set) + eps)
-    recall = tp / (len(gold_set) + eps)
-    f1 = 2 * precision * recall / (precision + recall + eps)
-    return precision, recall, f1
-```
-
-### Usage Notes
-
-- `GT-Edge Overlap F1` should be computed on the cleaned predicted path used for evaluation, not on the raw rollout trace if that raw trace still contains `NO_OP`, `STOP`, or `RESTART`.
-- `Relation Edit Distance` is normalized, so for mixed-hop datasets it should be reported per hop in addition to the overall value.
-- `Answer-Set F1` is mainly useful in multi-answer settings. For single-answer tasks, use a singleton gold set if needed, but it should not replace `Hits@1` or `MRR`.
+- multiple gold answer entities;
+- a gold relation-chain <code>Path-Key</code>; and
+- no single explicit entity-level <code>Paths</code> annotation.
+
+For that case, the evaluator enumerates all paths in the evaluator graph that:
+
+1. start at the question's source entity;
+2. follow the annotated relation chain exactly; and
+3. terminate at a valid gold answer.
+
+Call this set of valid reference paths G(q).
+
+The top-scoring predicted trajectory is still fixed. Only the **reference** is allowed to vary:
+
+~~~text
+PED_multi(q)   = min over P* in G(q) of PED(P_pred, P*)
+F1_SG_multi(q) = max over P* in G(q) of F1_SG(P_pred, P*)
+~~~
+
+For F1_SG, the precision/recall pair reported for the example comes from the same valid reference path that maximizes F1.
+
+This semantic expansion is used only during test evaluation and only when the required multi-answer and Path-Key information is available.
+
+## 11. Navigation diagnostics
+
+Diagnostics are computed on the raw highest-scoring rollout before trajectory cleanup.
+
+| Metric | Implementation |
+| --- | --- |
+| Special Step Rate | Fraction of raw steps whose relation is NO_OP, STOP, or RESTART |
+| Restart Rate | Fraction of raw steps that are RESTART |
+| No-Op Rate | Fraction of raw steps that are NO_OP |
+| Cycle Rate | Fraction of non-special steps whose tail entity was already visited |
+| Backtrack Rate | Fraction of non-special steps that immediately reverse the previous edge through its inverse relation |
+| Unique Edges | Number of distinct canonical non-special edges traversed |
+| Redundancy | 1 - unique_edges / non_special_steps |
+| Avg Segment Hops | Number of edges remaining after applying <code>path_segment_policy</code>, averaged across questions |
+
+These metrics describe policy behavior; they are not used as trajectory-fidelity rewards.
+
+## 12. STOP diagnostics
+
+When STOP is enabled, the evaluator reports both rollout-level and top-rollout statistics.
+
+For rollout-level metrics, the denominator is all evaluated rollouts:
+
+- **Stop Rate:** P(stopped)
+- **Correct Stop Rate:** P(stopped and final endpoint is a gold answer)
+- **Incorrect Stop Rate:** P(stopped and final endpoint is not a gold answer)
+- **Hit without Stop Rate:** P(hit and did not stop)
+- **Termination Step:** mean tracked termination step
+
+Top-rollout versions apply the same definitions to the highest-scoring rollout for each question.
+
+## 13. RESTART diagnostics
+
+When RESTART is enabled, the evaluator reports:
+
+- **Restart Any Rate:** P(rollout used RESTART at least once)
+- **Post Restart Success Rate:** P(hit | rollout used RESTART)
+- **Restart and Hit Rate:** P(rollout used RESTART and hit)
+
+Rollout-level and top-rollout versions are both reported.
+
+## 14. Search-space and entropy diagnostics
+
+The evaluator additionally reports:
+
+- valid action count at each step and its overall mean;
+- average action-distribution entropy by step; and
+- a question-level entropy summary derived from the same stored per-step action entropies.
+
+These are primarily debugging/analysis statistics rather than headline task metrics.
+
+## 15. Output files
+
+The evaluator writes a <code>scores.txt</code> containing the available sections for the selected dataset/configuration:
+
+~~~text
+Answer Metrics
+Per Hop Answer Metrics
+Valid Action Count at Each Step
+Entropy Metrics
+Reasoning Diagnostics (Top-Rollout)
+Stop Quality                         # when enabled
+Restart Quality                      # when enabled
+Answer(s) Endpoint Coverage Metrics
+SubGraph Overlap Metrics (SG)        # when path references are available
+Node-Set Overlap Metrics             # when full paths are available
+Path Edit Distance Metrics (PED)     # when path references are available
+Relation-Set Overlap Metrics (REL)   # when paths or Path-Key are available
+Relation Edit Distance Metrics (RED) # when paths or Path-Key are available
+~~~
+
+When <code>print_paths: True</code>, per-question trajectory logs include the question, source entity, gold answer(s), predicted answer, predicted path, raw path, and the available per-example fidelity values.
+
+## 16. Metric summary
+
+| Metric | Scope | Order-sensitive | Entity-sensitive | Better |
+| --- | --- | ---: | ---: | --- |
+| Hits@K | Ranked unique endpoints | No | Yes | Higher |
+| MRR | Ranked unique endpoints | No | Yes | Higher |
+| Answer-set F1 | Endpoint set across all rollouts | No | Yes | Higher |
+| F1_SG | Top-rollout edge set vs reference | No | Yes | Higher |
+| PED | Top-rollout edge sequence vs reference | Yes | Yes | Lower |
+| F1_REL | Top-rollout relation set vs reference | No | No | Higher |
+| RED | Top-rollout relation sequence vs reference | Yes | No | Lower |
+| Node F1 | Top-rollout node set vs reference | No | Yes | Higher |
+
+For paper-aligned trajectory reporting, the core path-fidelity names are **F1_SG**, **F1_REL**, **PED**, and **RED**. Hits@1 remains the endpoint-success measure; the fidelity metrics determine whether the agent reached its result through an evidence trajectory consistent with the annotated reasoning structure.

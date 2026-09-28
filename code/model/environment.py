@@ -699,6 +699,8 @@ class EpisodeNLQ(object):
     # 7-b) Path similarity metrics
     def get_subgraph_overlap(self, pred_path: List[List[int]], idx: int) -> Tuple[float, float, float]:
         """
+        {F1, Precision, Recall}_SG: Subgraph overlap between predicted and ground-truth paths.
+        
         Calculate permutation-invariant edge-set overlap between predicted and ground-truth paths.
 
         Edges are compared as sets (order and multiplicity do not matter). Special tokens
@@ -731,6 +733,8 @@ class EpisodeNLQ(object):
 
     def get_path_edit_distance(self, pred_path: List[List[int]], idx: int) -> float:
         """
+        PED: Path Edit Distance.
+
         Compute edit distance between predicted and ground-truth paths.
 
         Edit distance is computed via dynamic programming over the edge sequences after filtering
@@ -807,6 +811,8 @@ class EpisodeNLQ(object):
 
     def get_relation_edit_distance(self, pred_rels: List[List[int]], idx: int) -> float:
         """
+        RED: Relation Edit Distance.
+
         Compute edit distance between predicted and ground-truth relation sequences.
 
         Edit distance is computed via dynamic programming over the edge sequences after filtering
@@ -860,6 +866,8 @@ class EpisodeNLQ(object):
 
     def get_relation_coverage(self, pred_relations: List[int], idx: int) -> Tuple[float, float, float]:
         """
+        {F1, Precision, Recall}_REL: Relation coverage metric.
+
         Compute permutation-invariant relation coverage between predicted and ground-truth relations.
 
         Predicted relations are evaluated as a set. Inverse relation tokens are mapped back to their

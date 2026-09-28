@@ -1565,7 +1565,7 @@ class TrainerNLQ(object):
             score_file.write(f"\tPrecision: {all_final_answer_precision:7.4f}\n")
             score_file.write(f"\tF1 Score: {all_final_answer_f1:7.4f}\n")
             if path_metrics_reportable:
-                score_file.write(f"GT-Edge Overlap Metrics\n")
+                score_file.write(f"SubGraph Overlap Metrics (SG)\n")
                 score_file.write(f"	Recall: {all_final_path_recall:7.4f}\n")
                 score_file.write(f"	Precision: {all_final_path_precision:7.4f}\n")
                 score_file.write(f"	F1 Score: {all_final_path_f1:7.4f}\n")
@@ -1576,18 +1576,18 @@ class TrainerNLQ(object):
                     score_file.write(f"	Precision: {all_final_node_precision:7.4f}\n")
                     score_file.write(f"	F1 Score: {all_final_node_f1:7.4f}\n")
 
-                score_file.write("Path Edit Distance Metrics:\n")
+                score_file.write("Path Edit Distance Metrics (PED)\n")
                 score_file.write(f"	Overall Average: {overall_edit_distance:7.4f}\n")
                 for hop in all_edit_distance.keys():
                     score_file.write(f"		{hop}-Hop: {all_edit_distance[hop]:7.4f}\n")
             
             if self.environment.has_paths_or_keys():
-                score_file.write(f"Relation-Set Overlap Metrics\n")
+                score_file.write(f"Relation-Set Overlap Metrics (REL)\n")
                 score_file.write(f"\tRecall: {all_final_rel_recall:7.4f}\n")
                 score_file.write(f"\tPrecision: {all_final_rel_precision:7.4f}\n")
                 score_file.write(f"\tF1 Score: {all_final_rel_f1:7.4f}\n")
 
-                score_file.write("Relation Edit Distance Metrics:\n")
+                score_file.write("Relation Edit Distance Metrics (RED)\n")
                 score_file.write(f"\tOverall Average: {overall_rel_edit_distance:7.4f}\n")
                 for hop in all_rel_edit_distance.keys():
                     score_file.write(f"\t\t{hop}-Hop: {all_rel_edit_distance[hop]:7.4f}\n")
@@ -1657,7 +1657,7 @@ class TrainerNLQ(object):
         logger.info(f"\tPrecision: {all_final_answer_precision:7.4f}")
         logger.info(f"\tF1 Score: {all_final_answer_f1:7.4f}")
         if path_metrics_reportable:
-            logger.info("GT-Edge Overlap Metrics:")
+            logger.info("SubGraph Overlap Metrics (SG):")
             logger.info(f"	Recall: {all_final_path_recall:7.4f}")
             logger.info(f"	Precision: {all_final_path_precision:7.4f}")
             logger.info(f"	F1 Score: {all_final_path_f1:7.4f}")
@@ -1668,18 +1668,18 @@ class TrainerNLQ(object):
                 logger.info(f"	Precision: {all_final_node_precision:7.4f}")
                 logger.info(f"	F1 Score: {all_final_node_f1:7.4f}")
 
-            logger.info("Path Edit Distance Metrics:")
+            logger.info("Path Edit Distance Metrics (PED):")
             logger.info(f"	Overall Average: {overall_edit_distance:7.4f}")
             for hop in all_edit_distance.keys():
                 logger.info(f"		{hop}-Hop: {all_edit_distance[hop]:7.4f}")
         
         if self.environment.has_paths_or_keys():
-            logger.info("Relation-Set Overlap Metrics:")
+            logger.info("Relation-Set Overlap Metrics (REL):")
             logger.info(f"\tRecall: {all_final_rel_recall:7.4f}")
             logger.info(f"\tPrecision: {all_final_rel_precision:7.4f}")
             logger.info(f"\tF1 Score: {all_final_rel_f1:7.4f}")
 
-            logger.info("Relation Edit Distance Metrics:")
+            logger.info("Relation Edit Distance Metrics (RED):")
             logger.info(f"\tOverall Average: {overall_rel_edit_distance:7.4f}")
             for hop in all_rel_edit_distance.keys():
                 logger.info(f"\t\t{hop}-Hop: {all_rel_edit_distance[hop]:7.4f}")
@@ -2014,9 +2014,9 @@ class TrainerNLQ(object):
             f"{mode}/answer_set/rollout_precision": _as_float(vals.get("answer_precision")),
             f"{mode}/answer_set/rollout_f1": _as_float(vals.get("answer_f1")),
 
-            f"{mode}/evidence/edge_overlap/recall": _as_float(vals.get("path_recall")),
-            f"{mode}/evidence/edge_overlap/precision": _as_float(vals.get("path_precision")),
-            f"{mode}/evidence/edge_overlap/f1": _as_float(vals.get("path_f1")),
+            f"{mode}/evidence/subgraph_overlap/recall": _as_float(vals.get("path_recall")),
+            f"{mode}/evidence/subgraph_overlap/precision": _as_float(vals.get("path_precision")),
+            f"{mode}/evidence/subgraph_overlap/f1": _as_float(vals.get("path_f1")),
 
             f"{mode}/evidence/node_overlap/recall": _as_float(vals.get("node_recall")),
             f"{mode}/evidence/node_overlap/precision": _as_float(vals.get("node_precision")),

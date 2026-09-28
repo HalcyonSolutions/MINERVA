@@ -1,12 +1,14 @@
-# MINERVA for Natural-Language Graph Navigation
+# MINERVA: Natural-Language KG Navigation
 
-**M**eandering **I**n **N**etworks of **E**ntities to **R**each **V**erisimilar **A**nswers
+**Official MINERVA adaptation for [THESEUS](https://github.com/HalcyonSolutions/THESEUS)**
 
-This repository is the **official implementation of our MINERVA adaptation for natural-language multi-hop knowledge graph question answering**, as used in [*Theseus in the Graph: Towards Traceable Multi-Hop Graph Navigation*](https://arxiv.org/abs/2609.14528).
+This repository adapts the reinforcement-learning navigation framework from [MINERVA](https://arxiv.org/abs/1711.05851) to **natural-language multi-hop knowledge graph question answering**. Instead of conditioning the agent on a symbolic query of the form (h, r, ?), the agent receives a **natural-language question**, a **topic entity**, and a **knowledge graph**, then navigates an explicit sequence of graph edges toward an answer.
 
-It adapts the reinforcement-learning navigation framework from the original [MINERVA](https://arxiv.org/abs/1711.05851) from symbolic single-relation queries of the form (h, r, ?) to **question-conditioned graph navigation**: given a natural-language question, a topic entity, and a knowledge graph, the agent navigates an explicit sequence of graph edges toward an answer.
+This implementation is used in [*Theseus in the Graph: Towards Traceable Multi-Hop Graph Navigation*](https://arxiv.org/abs/2609.14528).
 
-> This is not the original MINERVA repository. The <code>master</code> branch contains the natural-language KGQA adaptation. For the symbolic knowledge-graph-completion version maintained in this repository, see the <code>minerva_tf1</code> branch.
+> **Project hub:** [THESEUS](https://github.com/HalcyonSolutions/THESEUS) — datasets, other adapted navigation agents, pretrained checkpoints, and shared evaluation resources.  
+> **Original MINERVA paper:** [Go for a Walk and Arrive at the Answer](https://arxiv.org/abs/1711.05851)  
+> **Symbolic-query / KGC branch:** [minerva_tf1](https://github.com/HernandezEduin/MINERVA/tree/minerva_tf1)
 
 ![MINERVA KG Navigation](images/minerva_navigation.gif)
 

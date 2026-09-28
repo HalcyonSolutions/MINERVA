@@ -22,7 +22,9 @@ This implementation is used in [*Theseus in the Graph: Towards Traceable Multi-H
 - Optional STOP and RESTART actions.
 - Explicit trajectory logging and path-fidelity evaluation.
 - Dataset-specific configurations for **Kinship**, **MQuAKE-ST**, and **MetaQA**.
-- Preprocessing and structural-baseline scripts under <code>scripts/</code>.
+- Pretrained MINERVA checkpoints for three seeds, released through **THESEUS**.
+- Structural calibration baselines: **RW-Ans_MC** and the **Shortest Path Oracle**.
+- Preprocessing and baseline scripts under <code>scripts/</code>.
 
 ## Quick start
 
@@ -80,10 +82,10 @@ bash scripts/run_eval.sh configs/kinship/evaluate.yaml 0
 
 | Guide | Contents |
 | --- | --- |
-| [Getting started](docs/getting_started.md) | Environment setup, dataset preparation, training, evaluation, and configuration |
+| [Getting started](docs/getting_started.md) | Environment setup, datasets, pretrained checkpoints, training, evaluation, and baseline scripts |
 | [Data format](docs/data_format.md) | Graph files, QA CSV schema, multi-answer data, paths, and custom datasets |
 | [Architecture](docs/architecture.md) | How MINERVA is adapted from symbolic queries to natural-language graph navigation |
-| [Evaluation metrics](docs/metrics.md) | Hits@K, MRR, F1_SG, F1_REL, PED, RED, answer coverage, and diagnostics |
+| [Evaluation metrics](docs/metrics.md) | Hits@K, MRR, F1_SG, F1_REL, PED, RED, and structural calibration references |
 
 ## Repository layout
 

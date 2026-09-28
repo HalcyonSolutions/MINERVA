@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Run after activating the repository environment.
+
 # Run Kinship path-fidelity baselines from the repo root.
 # Usage:
 #   bash scripts/baselines/run_kinship.sh
@@ -29,13 +31,13 @@ common_args=(
 )
 
 for seed in "${seeds[@]}"; do
-  conda run -n minerva_tf2 python -m code.baselines.random_walk_stats \
+  python -m code.baselines.random_walk_stats \
     "${common_args[@]}" \
     --num-walks 100 \
     --seed "$seed" \
     --output "$output_dir/random_walk_stats_kinship_seed${seed}.json"
 
-  conda run -n minerva_tf2 python -m code.baselines.shortcut_oracle_stats \
+  python -m code.baselines.shortcut_oracle_stats \
     "${common_args[@]}" \
     --seed "$seed" \
     --output "$output_dir/shortcut_oracle_stats_kinship_seed${seed}.json"

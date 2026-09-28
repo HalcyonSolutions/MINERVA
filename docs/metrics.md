@@ -263,7 +263,52 @@ The evaluator additionally reports:
 
 These are primarily debugging/analysis statistics rather than headline task metrics.
 
-## 15. Output files
+
+## 15. Structural calibration references
+
+The path-fidelity numbers in *Theseus in the Graph* are accompanied by two **non-learned structural calibration references**. They are intended to make the scale of PED, RED, F1_SG, and F1_REL easier to interpret; they are not competing KGQA models.
+
+The implementations are in [<code>code/baselines/</code>](https://github.com/HernandezEduin/MINERVA/tree/master/code/baselines), and the dataset-level launchers are in <code>scripts/baselines/</code>. The definitions follow Appendix A.4 of [*Theseus in the Graph*](https://arxiv.org/abs/2609.14528).
+
+### RW-Ans_MC and the unbiased random-walk reference
+
+<code>code/baselines/random_walk_stats.py</code> samples actual trajectories from the evaluator graph. At each step, the walk chooses uniformly among the valid navigation actions exposed by the grapher.
+
+The provided experiment wrappers use:
+
+- the benchmark's fixed mixed-hop navigation horizon;
+- **100 Monte Carlo walks per question**; and
+- seeds **0, 42, and 100**.
+
+For one question, the answer statistic is the fraction of sampled walks whose terminal entity is in the valid answer set. Averaging this quantity over evaluation questions gives the Monte Carlo random-walk answer reachability reported in the paper as **RW-Ans_MC**. The JSON summary uses the key <code>RW_Ans</code>.
+
+Crucially, the same sampled random-walk trajectories are also passed through the repository's path-fidelity evaluator. Their PED, RED, F1_SG, and F1_REL therefore provide an **unguided-navigation calibration** for the learned agents rather than an analytical proxy based only on graph degree or density.
+
+### Shortest Path Oracle
+
+<code>code/baselines/shortcut_oracle_stats.py</code> implements the paper's **Shortest Path Oracle**. The oracle is given the valid answer entity set and performs breadth-first search on the evaluator graph to find a shortest path from the topic entity to any valid answer.
+
+It is deliberately **question-agnostic**: the natural-language question is never used to choose the path. Its resulting trajectory is scored with the same PED, RED, F1_SG, and F1_REL implementations as a learned agent trajectory.
+
+This reference answers a different calibration question from the random walk:
+
+- the random walk measures path fidelity under **unguided traversal**;
+- the Shortest Path Oracle measures path fidelity when **answer reachability is known** and graph-theoretic path length is minimized, but the question's intended reasoning structure is ignored.
+
+The Shortest Path Oracle is therefore **not a strict upper or lower bound** on path fidelity. A shortest route to a correct answer can differ from the evidence path implied by the question.
+
+### Released wrappers
+
+| Setting | Random walk / RW-Ans_MC | Shortest Path Oracle |
+| --- | :---: | :---: |
+| Kinship | Yes | Yes |
+| MQuAKE-ST single-answer | Yes | Yes |
+| MQuAKE-ST multi-answer | Yes | Yes |
+| MetaQA | Yes | — |
+
+The random-walk and oracle scripts share the same path-fidelity helper functions in <code>baseline_path_fidelity.py</code>, including inverse-edge canonicalization, multi-answer semantic path expansion where available, and the configured path-segment cleanup policy.
+
+## 16. Output files
 
 The evaluator writes a <code>scores.txt</code> containing the available sections for the selected dataset/configuration:
 
@@ -285,7 +330,7 @@ Relation Edit Distance Metrics (RED) # when paths or Path-Key are available
 
 When <code>print_paths: True</code>, per-question trajectory logs include the question, source entity, gold answer(s), predicted answer, predicted path, raw path, and the available per-example fidelity values.
 
-## 16. Metric summary
+## 17. Metric summary
 
 | Metric | Scope | Order-sensitive | Entity-sensitive | Better |
 | --- | --- | ---: | ---: | --- |

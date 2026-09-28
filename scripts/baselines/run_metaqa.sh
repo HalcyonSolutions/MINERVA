@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Run after activating the repository environment.
+
 # Run MetaQA multi-answer path-fidelity baselines from the repo root.
 # Usage:
 #   bash scripts/baselines/run_metaqa.sh
@@ -29,7 +31,7 @@ common_args=(
 )
 
 for seed in "${seeds[@]}"; do
-  conda run -n minerva_tf2 python -m code.baselines.random_walk_stats \
+  python -m code.baselines.random_walk_stats \
     "${common_args[@]}" \
     --num-walks 100 \
     --seed "$seed" \

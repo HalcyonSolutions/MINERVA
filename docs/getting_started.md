@@ -157,7 +157,66 @@ The evaluation launcher calls <code>code/model/evaluation.py</code>. When <code>
 
 See [Evaluation metrics](metrics.md) for the exact ranking, path-fidelity, answer-coverage, and diagnostic metrics reported by the evaluator.
 
-## 6. Important configuration groups
+
+## 6. Pretrained checkpoints
+
+Pretrained MINERVA checkpoints for the experiments reported in [*Theseus in the Graph*](https://arxiv.org/abs/2609.14528) are released from the central [THESEUS project page](https://github.com/HalcyonSolutions/THESEUS). Each setting is provided for **three random seeds: 0, 42, and 100**.
+
+| Dataset / setting | Checkpoint page | Expected checkpoint prefix |
+| --- | --- | --- |
+| Kinship | [Download page](https://storage.googleapis.com/halcyon_data/multihop_ds/conferences/all/minerva/kinshiphinton/index.html) | <code>checkpoints/kinship/qa_nhop_reason_3hop_seed&lt;seed&gt;/model/model.ckpt</code> |
+| MQuAKE-ST single-answer | [Download page](https://storage.googleapis.com/halcyon_data/multihop_ds/conferences/all/minerva/mquake_st/single_answers/index.html) | <code>checkpoints/mquake_st/sa_qa_nhop_reason_4hop_seed&lt;seed&gt;/model/model.ckpt</code> |
+| MQuAKE-ST multi-answer | [Download page](https://storage.googleapis.com/halcyon_data/multihop_ds/conferences/all/minerva/mquake_st/multi_answers/index.html) | <code>checkpoints/mquake_st/ma_qa_nhop_reason_4hop_seed&lt;seed&gt;/model/model.ckpt</code> |
+| MetaQA | [Download page](https://storage.googleapis.com/halcyon_data/multihop_ds/conferences/all/minerva/metaqa/index.html) | <code>checkpoints/metaqa/qa_nhop_reason_3hop_seed&lt;seed&gt;/model/model.ckpt</code> |
+
+The current evaluation configurations use <code>seed: 0</code> by default. Their <code>model_load_dir</code> values interpolate the configured seed (and path length), so changing <code>seed</code> automatically changes the checkpoint location expected by the evaluator.
+
+For example:
+
+~~~yaml
+seed: 42
+path_length: 3
+model_load_dir: "checkpoints/kinship/qa_nhop_reason_${path_length}hop_seed${seed}/model/model.ckpt"
+~~~
+
+After downloading a checkpoint, extract/place the selected seed under the corresponding directory so that the TensorFlow checkpoint prefix resolves to the configured <code>model_load_dir</code>. The repository uses <code>checkpoints/</code> (plural).
+
+With the files in place, evaluation is unchanged:
+
+~~~bash
+bash scripts/run_eval.sh configs/kinship/evaluate.yaml 0
+~~~
+
+To evaluate a different released seed, change only the <code>seed</code> field in the YAML unless you have intentionally changed the run naming convention.
+
+## 7. Structural calibration baselines
+
+The repository includes the non-learned structural calibration references used in [*Theseus in the Graph*](https://arxiv.org/abs/2609.14528), including the definitions discussed in Appendix A.4. These references operate on the **actual evaluator navigation graph and action space** rather than serving as learned KGQA systems.
+
+- **RW-Ans_MC / unbiased random walk:** samples uniform random navigation trajectories. The supplied scripts use **100 walks per question** and, by default, the three seeds **0, 42, and 100**. The terminal answer-hit rate is the Monte Carlo <code>RW-Ans_MC</code> calibration; the same sampled trajectories are also evaluated with PED, RED, F1_SG, and F1_REL when the required references are available.
+- **Shortest Path Oracle:** is given the valid answer set and finds a shortest graph path from the topic entity to a valid answer, but it does **not** use the natural-language question. Its trajectory is evaluated with the same path-fidelity metrics. It is a structural reference, not a path-fidelity upper or lower bound.
+
+Dataset wrappers are provided under <code>scripts/baselines/</code>:
+
+| Setting | Command | Calibration references |
+| --- | --- | --- |
+| Kinship | <code>bash scripts/baselines/run_kinship.sh</code> | RW-Ans_MC + Shortest Path Oracle |
+| MQuAKE-ST single-answer | <code>bash scripts/baselines/run_mquake_st_sa.sh</code> | RW-Ans_MC + Shortest Path Oracle |
+| MQuAKE-ST multi-answer | <code>bash scripts/baselines/run_mquake_st_ma.sh</code> | RW-Ans_MC + Shortest Path Oracle |
+| MetaQA | <code>bash scripts/baselines/run_metaqa.sh</code> | RW-Ans_MC |
+
+With no seed arguments, the wrappers run <code>0 42 100</code>. To run only selected seeds, pass them explicitly:
+
+~~~bash
+bash scripts/baselines/run_kinship.sh 42
+bash scripts/baselines/run_mquake_st_sa.sh 0 100
+~~~
+
+Machine-readable results are written below <code>output/&lt;dataset&gt;/baselines/</code>. In the random-walk JSON output, the paper's <code>RW-Ans_MC</code> quantity is stored under the summary key <code>RW_Ans</code>.
+
+See [Evaluation metrics](metrics.md#15-structural-calibration-references) for the interpretation of these references and [<code>code/baselines/</code>](https://github.com/HernandezEduin/MINERVA/tree/master/code/baselines) for the implementations.
+
+## 8. Important configuration groups
 
 The YAML files expose the same options as <code>code/options.py</code>. The most commonly changed groups are:
 
@@ -208,7 +267,7 @@ The YAML files expose the same options as <code>code/options.py</code>. The most
 
 The default trajectory policy in <code>code/options.py</code> is <code>final_segment_truncate</code>: evaluation keeps the final attempt after the last RESTART and stops the evaluated path at STOP.
 
-## 7. Running a folder of configurations
+## 9. Running a folder of configurations
 
 <code>scripts/bulk_nlq.sh</code> launches every YAML in a directory with a configurable maximum number of concurrent jobs:
 
@@ -218,8 +277,9 @@ bash scripts/bulk_nlq.sh path/to/config_folder 4
 
 Use a directory containing only training configurations that you actually want to launch; dataset directories in <code>configs/</code> may contain both training and evaluation YAMLs.
 
-## 8. Where to look next
+## 10. Where to look next
 
 - [Architecture](architecture.md): model and code organization.
 - [Data format](data_format.md): graph and QA schemas.
-- [Evaluation metrics](metrics.md): exact evaluator behavior and metric definitions.
+- [Evaluation metrics](metrics.md): exact evaluator behavior, metric definitions, and structural calibration references.
+- [THESEUS](https://github.com/HalcyonSolutions/THESEUS): central project landing page for datasets, adapted agents, and released checkpoints.

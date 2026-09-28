@@ -5,7 +5,7 @@ set -euo pipefail
 #   ./raw_data/mquake_st_dataset
 #
 # The dataset can be downloaded from Hugging Face:
-#   hf download HalcyonSolutions/MQuAKE-ST \
+#   huggingface-cli download HalcyonSolutions/MQuAKE-ST \
 #       --repo-type dataset \
 #       --local-dir ./raw_data/mquake_st_dataset
 #

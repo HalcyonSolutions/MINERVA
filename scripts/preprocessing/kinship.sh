@@ -5,7 +5,7 @@ set -euo pipefail
 #   ./raw_data/kinship_hinton
 #
 # The dataset can be downloaded from Hugging Face:
-#   hf download HalcyonSolutions/Kinship \
+#   huggingface-cli download HalcyonSolutions/Kinship \
 #       --repo-type dataset \
 #       --local-dir ./raw_data/kinship_hinton
 #

@@ -169,7 +169,51 @@ Pretrained MINERVA checkpoints for the experiments reported in [*Theseus in the 
 | MQuAKE-ST multi-answer | [Download page](https://storage.googleapis.com/halcyon_data/multihop_ds/conferences/all/minerva/mquake_st/multi_answers/index.html) | <code>checkpoints/mquake_st/ma_qa_nhop_reason_4hop_seed&lt;seed&gt;/model/model.ckpt</code> |
 | MetaQA | [Download page](https://storage.googleapis.com/halcyon_data/multihop_ds/conferences/all/minerva/metaqa/index.html) | <code>checkpoints/metaqa/qa_nhop_reason_3hop_seed&lt;seed&gt;/model/model.ckpt</code> |
 
-The current evaluation configurations use <code>seed: 0</code> by default. Their <code>model_load_dir</code> values interpolate the configured seed (and path length), so changing <code>seed</code> automatically changes the checkpoint location expected by the evaluator.
+### Downloading a checkpoint
+
+Each checkpoint page provides one archive per released seed:
+
+- `seed0.zip`
+- `seed42.zip`
+- `seed100.zip`
+
+Copy the link for the desired seed from the corresponding checkpoint page, download it with `wget`, and extract it into the dataset checkpoint directory.
+
+For example, to download **MQuAKE-ST multi-answer, seed 0**:
+
+~~~bash
+wget https://storage.googleapis.com/halcyon_data/multihop_ds/conferences/all/minerva/mquake_st/multi_answers/seed0.zip
+
+unzip seed0.zip -d ./checkpoints/mquake_st/
+~~~
+
+The archive already contains the run-specific directory expected by the evaluation configuration. After extraction, the example above produces:
+
+~~~text
+checkpoints/
+└── mquake_st/
+    └── ma_qa_nhop_reason_4hop_seed0/
+        ├── config.json
+        ├── LICENSE
+        ├── model/
+        │   ├── checkpoint
+        │   ├── model.ckpt.data-00000-of-00001
+        │   ├── model.ckpt.index
+        │   └── model.ckpt.meta
+        ├── scores.txt
+        └── test_beam/
+~~~
+
+Use the corresponding destination directory for each dataset:
+
+| Dataset | Extract into |
+| --- | --- |
+| Kinship | <code>./checkpoints/kinship/</code> |
+| MQuAKE-ST single-answer | <code>./checkpoints/mquake_st/</code> |
+| MQuAKE-ST multi-answer | <code>./checkpoints/mquake_st/</code> |
+| MetaQA | <code>./checkpoints/metaqa/</code> |
+
+The current evaluation configurations use <code>seed: 0</code> by default. Their <code>model_load_dir</code> values interpolate the configured seed and path length, so changing <code>seed</code> automatically changes the checkpoint location expected by the evaluator.
 
 For example:
 
@@ -179,15 +223,13 @@ path_length: 3
 model_load_dir: "checkpoints/kinship/qa_nhop_reason_${path_length}hop_seed${seed}/model/model.ckpt"
 ~~~
 
-After downloading a checkpoint, extract/place the selected seed under the corresponding directory so that the TensorFlow checkpoint prefix resolves to the configured <code>model_load_dir</code>. The repository uses <code>checkpoints/</code> (plural).
+To evaluate another released checkpoint, download the corresponding `seed42.zip` or `seed100.zip` archive and update the <code>seed</code> field in the evaluation YAML.
 
-With the files in place, evaluation is unchanged:
+With the checkpoint in place, run evaluation normally:
 
 ~~~bash
 bash scripts/run_eval.sh configs/kinship/evaluate.yaml 0
 ~~~
-
-To evaluate a different released seed, change only the <code>seed</code> field in the YAML unless you have intentionally changed the run naming convention.
 
 ## 7. Structural calibration baselines
 

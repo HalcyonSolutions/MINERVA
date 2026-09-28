@@ -29,15 +29,15 @@ bash scripts/run_nlq.sh configs/kinship/train.yaml
 
 ## 2. Dataset preparation
 
-The repository provides preprocessing wrappers for the datasets used by the navigation experiments. They copy the navigation-ready source files into <code>datasets/nlq/&lt;dataset&gt;/</code>, build the graph representation, and create entity/relation vocabularies.
+The repository provides preprocessing wrappers for the datasets used by the navigation experiments. They copy the navigation-ready source files into <code>datasets/nlq/&lt;dataset&gt;/</code>, build the graph representation, and create the entity/relation vocabularies required by MINERVA.
 
-The central [THESEUS project page](https://github.com/HalcyonSolutions/THESEUS) indexes the released datasets, their mirrors, the other adapted agents, and pretrained checkpoints. Dataset-specific download links are also listed below.
+The central [THESEUS project page](https://github.com/HalcyonSolutions/THESEUS) indexes the released datasets, Google Cloud mirrors, adapted agents, and pretrained checkpoints.
 
 ### Kinship
 
 **Dataset:** [Hugging Face](https://huggingface.co/datasets/HalcyonSolutions/Kinship) · [Google Cloud mirror](https://storage.googleapis.com/halcyon_data/multihop_ds/datasets/Kinship/index.html)
 
-Download the dataset into the location expected by the preprocessing wrapper. For example, using Hugging Face:
+Using Hugging Face:
 
 ~~~bash
 huggingface-cli download HalcyonSolutions/Kinship \
@@ -45,60 +45,160 @@ huggingface-cli download HalcyonSolutions/Kinship \
   --local-dir ./raw_data/kinship_hinton
 ~~~
 
-Then preprocess it:
+Alternatively, copy the dataset archive link from the Google Cloud mirror and download it with `wget`:
+
+~~~bash
+wget https://storage.googleapis.com/halcyon_data/multihop_ds/datasets/Kinship/kinship_dataset.zip
+
+unzip kinship_dataset.zip -d ./raw_data/
+~~~
+
+The archive already contains the directory expected by the preprocessing script:
+
+~~~text
+raw_data/
+└── kinship_hinton/
+    ├── kg/
+    ├── qa/
+    ├── README.md
+    └── LICENSE
+~~~
+
+Then preprocess the dataset:
 
 ~~~bash
 bash scripts/preprocessing/kinship.sh
 ~~~
 
-The resulting QA file is <code>datasets/nlq/kinship/kinship_qa_nhop.csv</code>.
+The processed dataset is written under:
+
+~~~text
+datasets/nlq/kinship/
+~~~
+
+including the QA file:
+
+~~~text
+kinship_qa_nhop.csv
+~~~
 
 ### MQuAKE-ST
 
 **Dataset:** [Hugging Face](https://huggingface.co/datasets/HalcyonSolutions/MQuAKE-ST) · [Google Cloud mirror](https://storage.googleapis.com/halcyon_data/multihop_ds/datasets/MQuAKE_ST/index.html)
 
-For example, using Hugging Face:
+Using Hugging Face:
 
 ~~~bash
 huggingface-cli download HalcyonSolutions/MQuAKE-ST \
   --repo-type dataset \
   --local-dir ./raw_data/mquake_st_dataset
+~~~
 
+Alternatively, using the Google Cloud mirror:
+
+~~~bash
+wget https://storage.googleapis.com/halcyon_data/multihop_ds/datasets/MQuAKE_ST/mquake_st_dataset.zip
+
+unzip mquake_st_dataset.zip -d ./raw_data/
+~~~
+
+The archive already contains the directory expected by the preprocessing script:
+
+~~~text
+raw_data/
+└── mquake_st_dataset/
+    ├── kg/
+    ├── metadata/
+    ├── qa/
+    ├── README.md
+    └── LICENSE
+~~~
+
+Then preprocess the dataset:
+
+~~~bash
 bash scripts/preprocessing/mquake_st.sh
 ~~~
 
-This creates both the single-answer and multi-answer QA files used by the supplied configurations:
+The processed dataset is written under:
 
-- <code>mquake_sa_qa_nhop.csv</code>
-- <code>mquake_ma_qa_nhop.csv</code>
+~~~text
+datasets/nlq/mquake_st/
+~~~
+
+and includes both QA settings used by the provided configurations:
+
+~~~text
+mquake_sa_qa_nhop.csv
+mquake_ma_qa_nhop.csv
+~~~
 
 ### MetaQA
 
 **Dataset:** [Original MetaQA repository](https://github.com/yuyuz/MetaQA) · [THESEUS Google Cloud mirror](https://storage.googleapis.com/halcyon_data/multihop_ds/datasets/MetaQA/index.html)
 
-The preprocessing wrapper uses the navigation-ready THESEUS version and expects its files under:
+MINERVA uses the navigation-ready THESEUS version rather than the original MetaQA directory layout.
 
-~~~text
-./raw_data/metaqa_dataset/
-├── kg/triplets.txt
-├── metadata/node_data.csv
-├── metadata/relation_data.csv
-├── qa/metaqa_nhop.csv
-├── README.md
-└── LICENSE
+Download the archive from the Google Cloud mirror and extract it under `raw_data/`: 
+
+~~~bash
+wget https://storage.googleapis.com/halcyon_data/multihop_ds/datasets/MetaQA/metaqa_dataset.zip
+
+unzip metaqa_dataset.zip -d ./raw_data/
 ~~~
 
-Download the navigation-ready files from the Google Cloud mirror above and place them in that directory. Then run:
+The archive already contains the directory expected by the preprocessing script:
+
+~~~text
+raw_data/
+└── metaqa_dataset/
+    ├── kg/
+    │   └── triplets.txt
+    ├── metadata/
+    │   ├── node_data.csv
+    │   └── relation_data.csv
+    ├── qa/
+    │   └── metaqa_nhop.csv
+    ├── README.md
+    └── LICENSE
+~~~
+
+Then preprocess the dataset:
 
 ~~~bash
 bash scripts/preprocessing/metaqa.sh
 ~~~
 
+The processed dataset is written under:
+
+~~~text
+datasets/nlq/metaqa/
+~~~
+
+including:
+
+~~~text
+metaqa_qa_nhop.csv
+~~~
+
 ### What preprocessing creates
 
-The common wrapper <code>scripts/preprocessing/dataset.sh</code> invokes the graph and vocabulary utilities in <code>code/data/preprocessing_scripts/</code>. For the supplied datasets it creates a full graph and the vocabularies required by the agent.
+The dataset wrappers under <code>scripts/preprocessing/</code> copy the required source files and invoke the shared preprocessing utilities in <code>code/data/preprocessing_scripts/</code>.
 
-See [Data format](data_format.md) for the generated layout and for instructions on adding a custom dataset.
+For the supplied datasets, preprocessing creates the graph representation and entity/relation vocabularies required by MINERVA, resulting in a layout similar to:
+
+~~~text
+datasets/nlq/<dataset>/
+├── triplets.txt
+├── full_graph.txt
+├── <qa-file>.csv
+├── vocab/
+│   ├── entity_vocab.json
+│   └── relation_vocab.json
+└── ...
+~~~
+
+See [Data format](data_format.md) for the complete schema and instructions for adding a custom dataset.
 
 ## 3. Dataset-specific configurations
 

@@ -4,13 +4,14 @@
 
 This repository adapts the reinforcement-learning navigation framework from [MINERVA](https://arxiv.org/abs/1711.05851) to **natural-language multi-hop knowledge graph question answering**. Instead of conditioning the agent on a symbolic query of the form (h, r, ?), the agent receives a **natural-language question**, a **topic entity**, and a **knowledge graph**, then navigates an explicit sequence of graph edges toward an answer.
 
+![MINERVA KG Navigation](images/minerva_navigation.gif)
+*At each hop, MINERVA uses the natural-language question together with its recurrent path state to score the executable relation–entity actions available from the current node. The selected edge moves the agent to the next entity, producing an explicit reasoning path whose terminal entity is used as the predicted answer.*
+
 This implementation is used in [*Theseus in the Graph: Towards Traceable Multi-Hop Graph Navigation*](https://arxiv.org/abs/2609.14528).
 
 > **Project hub:** [THESEUS](https://github.com/HalcyonSolutions/THESEUS) — datasets, other adapted navigation agents, pretrained checkpoints, and shared evaluation resources.  
 > **Original MINERVA paper:** [Go for a Walk and Arrive at the Answer](https://arxiv.org/abs/1711.05851)  
 > **Symbolic-query / KGC branch:** [minerva_tf1](https://github.com/HernandezEduin/MINERVA/tree/minerva_tf1)
-
-![MINERVA KG Navigation](images/minerva_navigation.gif)
 
 ## What is included
 
